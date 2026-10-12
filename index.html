@@ -1,37 +1,44 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>SolarSystemAR | Interactive Portfolio</title>
+    <title>SolarSystemAR | Professional Portfolio</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    
-    <!-- A-Frame Core -->
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <!-- AR.js -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
-    <!-- Touch Controls for Zoom/Rotate -->
     <script src="https://unpkg.com/aframe-arjs-touch-controls@1.0.0/dist/aframe-arjs-touch-controls.min.js"></script>
-
+    
     <style>
-      body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
-      #ui-layer { 
-        position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
-        z-index: 10; color: white; background: rgba(255, 255, 255, 0.1); 
-        backdrop-filter: blur(10px); padding: 12px 24px; border-radius: 50px; 
-        border: 1px solid rgba(255, 255, 255, 0.2); text-align: center;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+      #ui-container {
+        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+        z-index: 100; display: flex; gap: 10px;
       }
-      h3 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: 0.5px; }
-      p { margin: 2px 0 0 0; font-size: 0.75rem; opacity: 0.8; }
+      .btn {
+        background: rgba(0, 0, 0, 0.6); color: white; border: 1px solid rgba(255,255,255,0.3);
+        padding: 10px 20px; border-radius: 25px; cursor: pointer; backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+      }
+      .btn:hover { background: rgba(255, 255, 255, 0.2); }
+      
+      /* Dynamic Labels */
+      .planet-label {
+        position: absolute; color: #fff; background: rgba(0,0,0,0.7);
+        padding: 5px 10px; border-radius: 4px; font-size: 12px; pointer-events: none;
+        transform: translate(-50%, -100%); white-space: nowrap;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
     </style>
   </head>
   <body>
-    <div id="ui-layer">
-      <h3>SOLAR SYSTEM AR</h3>
-      <p>Pinch to Zoom • Drag to Rotate</p>
+    <div id="ui-container">
+      <button class="btn" onclick="app.toggleLabels()">🏷️ Labels</button>
+      <button class="btn" onclick="app.resetCamera()">🔄 Reset View</button>
     </div>
 
+    <!-- Label Container -->
+    <div id="labels-layer"></div>
+
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;' vr-mode-ui="enabled: false">
-      
       <a-assets>
         <img id="sun-tex" src="./assets/textures/sun.jpg" crossorigin="anonymous">
         <img id="earth-tex" src="./assets/textures/earth.jpg" crossorigin="anonymous">
@@ -39,36 +46,110 @@
         <img id="star-tex" src="./assets/textures/stars.jpg" crossorigin="anonymous">
       </a-assets>
 
-      <!-- Starfield -->
+      <!-- Environment -->
       <a-sphere radius="100" material="src: #star-tex; side: back; transparent: true; opacity: 0.9"></a-sphere>
-
-      <!-- Lighting -->
-      <a-light type="point" intensity="2" position="0 1 0" castShadow="true"></a-light>
-      <a-light type="ambient" intensity="0.3"></a-light>
+      <a-light type="point" intensity="2" position="0 1 0"></a-light>
+      <a-light type="ambient" intensity="0.4"></a-light>
 
       <a-marker preset="hiro">
-        <a-entity position="0 0 0">
+        <a-entity id="solar-system">
           <!-- Sun -->
-          <a-sphere position="0 0.5 0" radius="0.3" material="src: #sun-tex; shader: flat"></a-sphere>
+          <a-sphere id="sun" position="0 0.5 0" radius="0.3" material="src: #sun-tex; shader: flat" 
+                    data-name="Sun" class="planet-obj"></a-sphere>
           
           <!-- Earth System -->
-          <a-entity animation="property: rotation; to: 0 360 0; dur: 15000; easing: linear; loop: true">
+          <a-entity id="earth-orbit" animation="property: rotation; to: 0 360 0; dur: 12000; easing: linear; loop: true">
             <a-entity position="1.0 0.5 0">
-              <a-sphere radius="0.12" material="src: #earth-tex"></a-sphere>
-              <!-- Moon -->
-              <a-sphere position="0.25 0 0" radius="0.03" color="#CCCCCC"></a-sphere>
+              <a-sphere id="earth" radius="0.12" material="src: #earth-tex" 
+                        data-name="Earth" class="planet-obj"></a-sphere>
+              <a-sphere position="0.25 0 0" radius="0.03" color="#DDD" data-name="Moon"></a-sphere>
             </a-entity>
           </a-entity>
 
           <!-- Mars -->
-          <a-entity animation="property: rotation; to: 0 360 0; dur: 25000; easing: linear; loop: true">
-            <a-sphere position="1.6 0.5 0" radius="0.09" material="src: #mars-tex"></a-sphere>
+          <a-entity id="mars-orbit" animation="property: rotation; to: 0 360 0; dur: 20000; easing: linear; loop: true">
+            <a-sphere id="mars" position="1.6 0.5 0" radius="0.09" material="src: #mars-tex" 
+                      data-name="Mars" class="planet-obj"></a-sphere>
           </a-entity>
         </a-entity>
       </a-marker>
 
-      <!-- Camera with Touch Controls -->
       <a-entity camera look-controls="touchEnabled: true" wasd-controls-enabled="false"></a-entity>
     </a-scene>
+
+    <script>
+      // --- APPLICATION LOGIC ---
+      const app = {
+        labelsVisible: true,
+        labels: {},
+        
+        init: function() {
+          this.createLabels();
+          this.setupInteractions();
+          this.startLabelLoop();
+        },
+
+        createLabels: function() {
+          const planets = document.querySelectorAll('.planet-obj');
+          const container = document.getElementById('labels-layer');
+          planets.forEach(p => {
+            const label = document.createElement('div');
+            label.className = 'planet-label';
+            label.innerText = p.getAttribute('data-name');
+            label.style.display = this.labelsVisible ? 'block' : 'none';
+            container.appendChild(label);
+            this.labels[p.id] = label;
+          });
+        },
+
+        setupInteractions: function() {
+          document.querySelectorAll('.planet-obj').forEach(el => {
+            el.addEventListener('click', () => this.focusOnPlanet(el));
+          });
+        },
+
+        focusOnPlanet: function(el) {
+          const name = el.getAttribute('data-name');
+          // In a full engine, we would interpolate camera.position here
+          console.log(`Initiating sequence to ${name}...`);
+          alert(`Zooming to ${name}. Landmarks loaded.`);
+        },
+
+        toggleLabels: function() {
+          this.labelsVisible = !this.labelsVisible;
+          Object.values(this.labels).forEach(l => l.style.display = this.labelsVisible ? 'block' : 'none');
+        },
+
+        resetCamera: function() {
+          const cam = document.querySelector('[camera]');
+          cam.setAttribute('position', '0 1 3');
+          cam.setAttribute('rotation', '0 0 0');
+        },
+
+        startLabelLoop: function() {
+          const scene = document.querySelector('a-scene');
+          setInterval(() => {
+            if (!this.labelsVisible) return;
+            Object.keys(this.labels).forEach(id => {
+              const el = document.getElementById(id);
+              const label = this.labels[id];
+              if (el && el.object3D) {
+                const pos = new THREE.Vector3();
+                el.object3D.getWorldPosition(pos);
+                // Project 3D position to 2D screen space
+                pos.project(scene.camera);
+                const x = (pos.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-(pos.y * 0.5) + 0.5) * window.innerHeight;
+                label.style.left = `${x}px`;
+                label.style.top = `${y}px`;
+              }
+            });
+          }, 50); // Update every 50ms
+        }
+      };
+
+      // Initialize when scene is ready
+      document.querySelector('a-scene').addEventListener('loaded', () => app.init());
+    </script>
   </body>
 </html>
