@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>SolarSystemAR | Francis Mugo</title>
+    <title>SolarSystemAR | Realistic Experience</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
@@ -10,37 +10,66 @@
       #ui-layer { 
         position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
         z-index: 10; color: white; background: rgba(0, 0, 0, 0.7); 
-        padding: 15px 25px; border-radius: 30px; text-align: center;
+        padding: 10px 20px; border-radius: 20px; text-align: center; pointer-events: none;
       }
     </style>
   </head>
   <body>
     <div id="ui-layer">
-      <h3>🌌 Solar System AR</h3>
-      <p>Point camera at the Marker</p>
+      <h3>🌌 Interactive Solar System</h3>
+      <p>Pinch to Zoom | Drag to Rotate</p>
     </div>
 
+    <!-- Added look-controls and wasd-controls for zooming/movement -->
     <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;'>
       
-      <!-- Starfield Background -->
-      <a-sphere radius="100" material="src: ./assets/textures/stars.jpg; side: back; transparent: true; opacity: 0.9"></a-sphere>
+      <!-- Assets Management -->
+      <a-assets>
+        <img id="sun-tex" src="./assets/textures/sun.jpg">
+        <img id="earth-tex" src="./assets/textures/earth.jpg">
+        <img id="mars-tex" src="./assets/textures/mars.jpg">
+        <img id="star-tex" src="./assets/textures/stars.jpg">
+      </a-assets>
 
-      <!-- Hiro Marker (Testing) -->
+      <!-- Deep Space Environment -->
+      <a-sphere radius="100" material="src: #star-tex; side: back; transparent: true; opacity: 0.8"></a-sphere>
+
+      <!-- Lighting: The Sun is the light source -->
+      <a-light type="point" intensity="1.5" position="0 0.5 0" color="#ffffff"></a-light>
+      <a-light type="ambient" intensity="0.2"></a-light>
+
       <a-marker preset="hiro">
         <a-entity position="0 0 0">
-          <!-- The Sun -->
-          <a-sphere position="0 0.5 0" radius="0.25" color="#FDB813" shader="flat" animation="property: scale; to: 1.1 1.1 1.1; dir: alternate; dur: 2000; loop: true"></a-sphere>
           
-          <!-- Earth Orbit -->
-          <a-entity animation="property: rotation; to: 0 360 0; dur: 10000; easing: linear; loop: true">
-            <a-entity position="1.2 0 0">
-              <a-gltf-model src="./assets/models/earth.glb" scale="0.15 0.15 0.15" animation="property: rotation; to: 0 360 0; dur: 4000; loop: true"></a-gltf-model>
+          <!-- THE SUN -->
+          <a-sphere position="0 0.5 0" radius="0.3" material="src: #sun-tex; shader: flat"></a-sphere>
+          
+          <!-- MERCURY ORBIT -->
+          <a-entity animation="property: rotation; to: 0 360 0; dur: 4000; easing: linear; loop: true">
+            <a-sphere position="0.5 0.5 0" radius="0.05" color="#A5A5A5"></a-sphere>
+          </a-entity>
+
+          <!-- EARTH ORBIT -->
+          <a-entity animation="property: rotation; to: 0 360 0; dur: 12000; easing: linear; loop: true">
+            <a-entity position="0.9 0.5 0">
+              <a-sphere radius="0.1" material="src: #earth-tex"></a-sphere>
+              <!-- MOON -->
+              <a-entity animation="property: rotation; to: 0 360 0; dur: 2000; loop: true">
+                <a-sphere position="0.2 0 0" radius="0.03" color="#DDDDDD"></a-sphere>
+              </a-entity>
             </a-entity>
           </a-entity>
+
+          <!-- MARS ORBIT -->
+          <a-entity animation="property: rotation; to: 0 360 0; dur: 20000; easing: linear; loop: true">
+            <a-sphere position="1.3 0.5 0" radius="0.08" material="src: #mars-tex"></a-sphere>
+          </a-entity>
+
         </a-entity>
       </a-marker>
 
-      <a-entity camera></a-entity>
+      <!-- Camera with Zoom/Movement Controls -->
+      <a-entity camera look-controls wasd-controls position="0 1 3"></a-entity>
     </a-scene>
   </body>
 </html>
